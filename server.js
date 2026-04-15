@@ -4,9 +4,9 @@ const axios = require('axios');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-const API_KEY = process.env.PUBG_API_KEY;
+const API_KEY = process.env.PUBG_API_KEY; 
 const PLATFORM = 'steam'; 
 const config = {
   headers: {
@@ -15,37 +15,65 @@ const config = {
   }
 };
 
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/api/stats/:nombreJugador', async (req, res) => {
+app.get('/api/seasons', async (req, res) => {
+    try {
+        const urlSeasons = `https://api.pubg.com/shards/${PLATFORM}/seasons`;
+        const respuesta = await axios.get(urlSeasons, config);
+        
+        const temporadasPC = respuesta.data.data
+            .filter(season => season.id.includes('pc-'))
+            .reverse(); 
+
+        res.json(temporadasPC);
+    } catch (error) {
+        console.error('Error al cargar temporadas');
+        res.status(500).json({ error: 'No se pudieron cargar las temporadas' });
+    }
+});
+
+app.get('/api/stats/:nombreJugador/:seasonId', async (req, res) => {
   const playerName = req.params.nombreJugador; 
+  const seasonId = req.params.seasonId;
 
   try {
-    console.log(`Petición recibida en la web buscando a: ${playerName}`);
+    console.log(`Buscando a ${playerName} en la temporada: ${seasonId}`);
     
     const urlId = `https://api.pubg.com/shards/${PLATFORM}/players?filter[playerNames]=${playerName}`;
     const respuestaId = await axios.get(urlId, config);
     const accountId = respuestaId.data.data[0].id;
 
-    const urlStats = `https://api.pubg.com/shards/${PLATFORM}/players/${accountId}/seasons/lifetime`;
+    const urlStats = `https://api.pubg.com/shards/${PLATFORM}/players/${accountId}/seasons/${seasonId}`;
     const respuestaStats = await axios.get(urlStats, config);
-    
-    const statsSquadFpp = respuestaStats.data.data.attributes.gameModeStats['squad-fpp'];
-    const statsDuoFpp = respuestaStats.data.data.attributes.gameModeStats['duo-fpp'];
-    const statsSoloFpp = respuestaStats.data.data.attributes.gameModeStats['solo-fpp'];
+    const stats = respuestaStats.data.data.attributes.gameModeStats;
 
+    let statsRankedSquadFpp = null;
+    let statsRankedSquadTpp = null;
+    
+    if (seasonId !== 'lifetime') {
+        try {
+            const urlRanked = `https://api.pubg.com/shards/${PLATFORM}/players/${accountId}/seasons/${seasonId}/ranked`;
+            const respuestaRanked = await axios.get(urlRanked, config);
+            const rankedStats = respuestaRanked.data.data.attributes.rankedGameModeStats;
+            statsRankedSquadFpp = rankedStats['squad-fpp'];
+            statsRankedSquadTpp = rankedStats['squad'];
+        } catch (e) {
+            console.log(`El jugador no tiene stats de Ranked en la temporada ${seasonId}.`);
+        }
+    }
     res.json({
-        squad: statsSquadFpp,
-        duo: statsDuoFpp,
-        solo: statsSoloFpp
+        fpp: { squad: stats['squad-fpp'], duo: stats['duo-fpp'], solo: stats['solo-fpp'] },
+        tpp: { squad: stats['squad'], duo: stats['duo'], solo: stats['solo'] },
+        ranked: { squadFpp: statsRankedSquadFpp, squadTpp: statsRankedSquadTpp }
     });
 
   } catch (error) {
-    console.error('Error al buscar jugador');
-    res.status(404).json({ error: 'Jugador no encontrado' });
+    console.error('Error procesando jugador o no tiene datos en esa temporada.');
+    res.status(404).json({ error: 'Jugador no encontrado o sin datos en esta temporada' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor Web corriendo en http://localhost:${PORT}`);
+  console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
 });

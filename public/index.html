@@ -117,3 +117,233 @@
     </script>
 </body>
 </html>
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PUBG Stats Tracker Pro</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #1a1a1a; color: white; padding: 20px; }
+        .panel-busqueda { background-color: #2b2b2b; padding: 20px; border-radius: 8px; display: inline-block; margin-bottom: 20px; }
+        
+        input, select { padding: 10px; font-size: 16px; margin: 5px; border-radius: 4px; border: 1px solid #555; background-color: #444; color: white; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; font-weight: bold; border-radius: 4px; transition: 0.2s; }
+        
+        .btn-buscar { background-color: #f2a900; color: black; }
+        .btn-buscar:hover { background-color: #d19200; }
+        
+        .contenedor-botones { margin-top: 15px; display: none; }
+        .btn-vista { background-color: #444; color: white; margin: 0 5px; }
+        .btn-vista.activo { background-color: #f2a900; color: black; }
+        .btn-ranked { background-color: #5a0000; color: white; }
+        .btn-ranked.activo { background-color: #ff3333; color: white; font-weight: bold; }
+
+        .contenedor-stats { display: flex; justify-content: center; gap: 20px; margin-top: 20px; flex-wrap: wrap; }
+        .caja-stats { background-color: #333; padding: 20px; border-radius: 8px; text-align: left; min-width: 240px; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        .caja-stats h3 { color: #f2a900; border-bottom: 2px solid #555; padding-bottom: 10px; text-align: center; margin-top: 0; }
+    </style>
+</head>
+<body>
+
+    <h1>PUBG Stats Tracker</h1>
+    
+    <div class="panel-busqueda">
+        <p style="margin-top: 0;">Selecciona la Temporada y el Jugador:</p>
+        <select id="selectTemporada">
+            <option value="lifetime">De por vida (Lifetime)</option>
+            </select>
+        
+        <input type="text" id="inputNombre" placeholder="Nombre en Steam">
+        <button class="btn-buscar" onclick="buscarStats()">Buscar Stats</button>
+    </div>
+    
+    <p id="mensajeError" style="color: #ff4c4c; font-weight: bold; margin: 0;"></p>
+    <h2 id="tituloJugador" style="margin-top: 10px;"></h2>
+
+    <div id="selectorVista" class="contenedor-botones">
+        <button id="btnFpp" class="btn-vista activo" onclick="cambiarVista('fpp')">Normal (FPP)</button>
+        <button id="btnTpp" class="btn-vista" onclick="cambiarVista('tpp')">Normal (TPP)</button>
+        <button id="btnRanked" class="btn-vista btn-ranked" onclick="cambiarVista('ranked')">Competitivo (Ranked)</button>
+    </div>
+
+    <div class="contenedor-stats">
+        <div id="cajaSquad" class="caja-stats">
+            <h3 id="titulo-squad">SQUAD</h3>
+            <p>🎮 Partidas: <span id="squad-partidas">-</span></p>
+            <p>🏆 Victorias: <span id="squad-victorias">-</span></p>
+            <p>💀 Kills: <span id="squad-kills">-</span></p>
+            <p>💥 Daño: <span id="squad-dano">-</span></p>
+            <p>🎖️ Tops 10: <span id="squad-top10">-</span></p>
+            <p>🚑 Asistencias: <span id="squad-assist">-</span></p>
+            <p>🚗 Distancia recorrida: <span id="squad-distancia">-</span></p>
+        </div>
+        <div id="cajaDuo" class="caja-stats">
+            <h3 id="titulo-duo">DUO</h3>
+            <p>🎮 Partidas: <span id="duo-partidas">-</span></p>
+            <p>🏆 Victorias: <span id="duo-victorias">-</span></p>
+            <p>💀 Kills: <span id="duo-kills">-</span></p>
+            <p>💥 Daño: <span id="duo-dano">-</span></p>
+            <p>🎖️ Tops 10: <span id="duo-top10">-</span></p>
+            <p>🚑 Asistencias: <span id="duo-assist">-</span></p>
+            <p>🚗 Distancia recorrida: <span id="duo-distancia">-</span></p>
+        </div>
+        <div id="cajaSolo" class="caja-stats">
+            <h3 id="titulo-solo">SOLO</h3>
+            <p>🎮 Partidas: <span id="solo-partidas">-</span></p>
+            <p>🏆 Victorias: <span id="solo-victorias">-</span></p>
+            <p>💀 Kills: <span id="solo-kills">-</span></p>
+            <p>💥 Daño: <span id="solo-dano">-</span></p>
+            <p>🎖️ Tops 10: <span id="solo-top10">-</span></p>
+            <p>🚑 Asistencia: <span id="solo-assist">-</span></p>
+            <p>🚗 Distancia recorrida: <span id="solo-distancia">-</span></p>
+        </div>
+    </div>
+
+    <script>
+        let datosGlobales = null;
+        let vistaActual = 'fpp';
+
+        // 1. Cargar temporadas automáticamente al abrir la página
+        window.onload = async function() {
+            try {
+                const res = await fetch('/api/seasons');
+                const temporadas = await res.json();
+                const select = document.getElementById('selectTemporada');
+                
+                temporadas.forEach(temp => {
+                    let option = document.createElement('option');
+                    option.value = temp.id;
+                    // Limpiamos el texto para que se lea mejor (ej. "Temporada 28")
+                    let numTemp = temp.id.split('pc-')[1];
+                    option.text = temp.attributes.isCurrentSeason ? `Temporada ${numTemp} (Actual)` : `Temporada ${numTemp}`;
+                    
+                    // Si es la actual, la seleccionamos por defecto
+                    if(temp.attributes.isCurrentSeason) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error("No se pudieron cargar las temporadas");
+            }
+        };
+
+        // 2. Función principal de búsqueda
+        async function buscarStats() {
+            const nombre = document.getElementById('inputNombre').value;
+            const seasonId = document.getElementById('selectTemporada').value;
+            const errorMsg = document.getElementById('mensajeError');
+            
+            if(!nombre) return;
+
+            document.getElementById('cajaSquad').style.display = 'block';
+            document.getElementById('cajaDuo').style.display = 'block';
+            document.getElementById('cajaSolo').style.display = 'block';
+            document.getElementById('selectorVista').style.display = 'none';
+            errorMsg.innerText = 'Consultando base de datos...';
+            document.getElementById('tituloJugador').innerText = '';
+
+            try {
+                // Ahora enviamos el nombre y la temporada a nuestro backend
+                const respuesta = await fetch(`/api/stats/${nombre}/${seasonId}`);
+                const datos = await respuesta.json();
+
+                if (respuesta.ok) {
+                    errorMsg.innerText = '';
+                    
+                    let textoTemporada = document.getElementById('selectTemporada').options[document.getElementById('selectTemporada').selectedIndex].text;
+                    document.getElementById('tituloJugador').innerText = `${nombre.toUpperCase()} - ${textoTemporada}`;
+                    
+                    document.getElementById('selectorVista').style.display = 'block';
+                    datosGlobales = datos;
+                    
+                    // Si eligió Lifetime, el botón de Ranked no debería usarse, así que forzamos la vista a FPP
+                    if(seasonId === 'lifetime' && vistaActual === 'ranked') {
+                        vistaActual = 'fpp';
+                    }
+                    
+                    mostrarDatosVista(vistaActual);
+                } else {
+                    errorMsg.innerText = '❌ ' + datos.error;
+                }
+            } catch (error) {
+                errorMsg.innerText = '❌ Error de red.';
+            }
+        }
+
+        // 3. Sistema de Pestañas
+        function cambiarVista(nuevaVista) {
+            if (!datosGlobales) return;
+            
+            // Validación: No existe Ranked de por vida
+            if (document.getElementById('selectTemporada').value === 'lifetime' && nuevaVista === 'ranked') {
+                alert("Las estadísticas Ranked no están disponibles en el modo 'De por vida'. Por favor, selecciona una temporada específica.");
+                return;
+            }
+
+            vistaActual = nuevaVista;
+            
+            document.getElementById('btnFpp').classList.remove('activo');
+            document.getElementById('btnTpp').classList.remove('activo');
+            document.getElementById('btnRanked').classList.remove('activo');
+            
+            if (nuevaVista === 'fpp') document.getElementById('btnFpp').classList.add('activo');
+            else if (nuevaVista === 'tpp') document.getElementById('btnTpp').classList.add('activo');
+            else document.getElementById('btnRanked').classList.add('activo');
+
+            mostrarDatosVista(vistaActual);
+        }
+
+        // 4. Llenar las cajas según la vista
+        function mostrarDatosVista(vista) {
+            const llenarTarjeta = (modo, stats) => {
+                if (stats && stats.roundsPlayed > 0) {
+                    document.getElementById(`${modo}-partidas`).innerText = stats.roundsPlayed;
+                    document.getElementById(`${modo}-victorias`).innerText = stats.wins;
+                    document.getElementById(`${modo}-kills`).innerText = stats.kills;
+                    document.getElementById(`${modo}-dano`).innerText = Math.round(stats.damageDealt);
+                    document.getElementById(`${modo}-top10`).innerText = stats.top10s;
+                    document.getElementById(`${modo}-assist`).innerText = stats.assists;
+                    document.getElementById(`${modo}-distancia`).innerText = Math.round(stats.rideDistance);
+                } else {
+                    document.getElementById(`${modo}-partidas`).innerText = "0";
+                    document.getElementById(`${modo}-victorias`).innerText = "0";
+                    document.getElementById(`${modo}-kills`).innerText = "0";
+                    document.getElementById(`${modo}-dano`).innerText = "0";
+                    document.getElementById(`${modo}-top10`).innerText = "0";
+                    document.getElementById(`${modo}-assist`).innerText = "0";
+                    document.getElementById(`${modo}-distancia`).innerText = "0";
+                }
+            };
+
+            if (vista === 'fpp' || vista === 'tpp') {
+                const datosAUsar = datosGlobales[vista];
+                const sufijo = vista === 'fpp' ? 'FPP' : 'TPP';
+
+                document.getElementById('cajaSolo').style.display = 'block'; 
+                
+                document.getElementById('titulo-squad').innerText = `SQUAD ${sufijo}`;
+                document.getElementById('titulo-duo').innerText = `DUO ${sufijo}`;
+                document.getElementById('titulo-solo').innerText = `SOLO ${sufijo}`;
+
+                llenarTarjeta('squad', datosAUsar.squad);
+                llenarTarjeta('duo', datosAUsar.duo);
+                llenarTarjeta('solo', datosAUsar.solo);
+            } 
+            else if (vista === 'ranked') {
+                const datosRanked = datosGlobales.ranked;
+                
+                document.getElementById('cajaSolo').style.display = 'none'; 
+
+                document.getElementById('titulo-squad').innerText = `🏆 SQUAD RANKED (FPP)`;
+                document.getElementById('titulo-duo').innerText = `🏆 SQUAD RANKED (TPP)`;
+
+                llenarTarjeta('squad', datosRanked.squadFpp);
+                llenarTarjeta('duo', datosRanked.squadTpp); 
+            }
+        }
+    </script>
+</body>
+</html>
