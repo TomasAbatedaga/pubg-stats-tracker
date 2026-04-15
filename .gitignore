@@ -1,0 +1,5 @@
+# Ignorar dependencias pesadas de Node
+node_modules/
+
+# Ignorar mis variables secretas
+.env

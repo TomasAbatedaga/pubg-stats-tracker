@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PUBG Stats Tracker</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #222; color: white; padding: 20px; }
+        input { padding: 10px; font-size: 16px; width: 200px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #f2a900; border: none; font-weight: bold; }
+        
+        /* Contenedor flexible para mostrar las 3 cajas en fila */
+        .contenedor-stats { display: flex; justify-content: center; gap: 20px; margin-top: 30px; flex-wrap: wrap; }
+        
+        /* Diseño de cada tarjeta de modo de juego */
+        .caja-stats { background-color: #333; padding: 20px; border-radius: 8px; text-align: left; min-width: 220px; display: none; }
+        .caja-stats h3 { color: #f2a900; border-bottom: 1px solid #555; padding-bottom: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <h1>Buscador de Stats - PUBG</h1>
+    <p>Ingresa el nombre de usuario:</p>
+    
+    <input type="text" id="inputNombre" placeholder="Ej: zTomy1">
+    <button onclick="buscarStats()">Buscar</button>
+    
+    <p id="mensajeError" style="color: #ff4c4c; margin-top: 15px; font-weight: bold;"></p>
+    <h2 id="tituloJugador" style="margin-top: 20px;"></h2>
+
+    <div class="contenedor-stats">
+        
+        <div id="cajaSquad" class="caja-stats">
+            <h3>SQUAD FPP</h3>
+            <p>🎮 Partidas: <span id="squad-partidas">-</span></p>
+            <p>🏆 Victorias: <span id="squad-victorias">-</span></p>
+            <p>💀 Kills: <span id="squad-kills">-</span></p>
+            <p>💥 Daño: <span id="squad-dano">-</span></p>
+            <p>🎖️ Tops 10: <span id="squad-top10">-</span></p>
+            <p>🚑 Asistencias: <span id="squad-assist">-</span></p>
+            <p>🚗 Distancia recorrida: <span id="squad-distancia">-</span></p>
+        </div>
+
+        <div id="cajaDuo" class="caja-stats">
+            <h3>DUO FPP</h3>
+            <p>🎮 Partidas: <span id="duo-partidas">-</span></p>
+            <p>🏆 Victorias: <span id="duo-victorias">-</span></p>
+            <p>💀 Kills: <span id="duo-kills">-</span></p>
+            <p>💥 Daño: <span id="duo-dano">-</span></p>
+            <p>🎖️ Tops 10: <span id="duo-top10">-</span></p>
+            <p>🚑 Asistencias: <span id="duo-assist">-</span></p>
+            <p>🚗 Distancia recorrida: <span id="duo-distancia">-</span></p>
+        </div>
+
+        <div id="cajaSolo" class="caja-stats">
+            <h3>SOLO FPP</h3>
+            <p>🎮 Partidas: <span id="solo-partidas">-</span></p>
+            <p>🏆 Victorias: <span id="solo-victorias">-</span></p>
+            <p>💀 Kills: <span id="solo-kills">-</span></p>
+            <p>💥 Daño: <span id="solo-dano">-</span></p>
+            <p>🎖️ Tops 10: <span id="solo-top10">-</span></p>
+            <p>🚑 Asistencia: <span id="solo-assist">-</span></p>
+            <p>🚗 Distancia recorrida: <span id="solo-distancia">-</span></p>
+        </div>
+
+    </div>
+
+    <script>
+        async function buscarStats() {
+            const nombre = document.getElementById('inputNombre').value;
+            const errorMsg = document.getElementById('mensajeError');
+            
+            // Mostrar las cajas y poner el estado de "Buscando..."
+            document.getElementById('cajaSquad').style.display = 'block';
+            document.getElementById('cajaDuo').style.display = 'block';
+            document.getElementById('cajaSolo').style.display = 'block';
+            errorMsg.innerText = 'Buscando datos en el servidor...';
+            document.getElementById('tituloJugador').innerText = '';
+
+            try {
+                // Consultamos a nuestro propio backend de Express
+                const respuesta = await fetch(`/api/stats/${nombre}`);
+                const datos = await respuesta.json();
+
+                if (respuesta.ok && datos) {
+                    errorMsg.innerText = '';
+                    document.getElementById('tituloJugador').innerText = `Estadísticas de ${nombre.toUpperCase()}`;
+
+                    // Creamos una pequeña función interna para no repetir tanto código al llenar los datos
+                    // Esta función hace exactamente la misma validación (roundsPlayed > 0) que hiciste en Node
+                    const llenarTarjeta = (modo, stats) => {
+                        if (stats && stats.roundsPlayed > 0) {
+                            document.getElementById(`${modo}-partidas`).innerText = stats.roundsPlayed;
+                            document.getElementById(`${modo}-victorias`).innerText = stats.wins;
+                            document.getElementById(`${modo}-kills`).innerText = stats.kills;
+                            document.getElementById(`${modo}-dano`).innerText = Math.round(stats.damageDealt);
+                            document.getElementById(`${modo}-top10`).innerText = stats.top10s;
+                            document.getElementById(`${modo}-assist`).innerText = stats.assists;
+                            document.getElementById(`${modo}-distancia`).innerText = Math.round(stats.rideDistance);
+                        } else {
+                            // Si no jugó ese modo, ponemos todo en 0
+                            document.getElementById(`${modo}-partidas`).innerText = "0";
+                            document.getElementById(`${modo}-victorias`).innerText = "0";
+                            document.getElementById(`${modo}-kills`).innerText = "0";
+                            document.getElementById(`${modo}-dano`).innerText = "0";
+                            document.getElementById(`${modo}-top10`).innerText = "0";
+                            document.getElementById(`${modo}-assist`).innerText = "0";
+                            document.getElementById(`${modo}-distancia`).innerText = "0";
+                        }
+                    };
+
+                    // Llamamos a la función para cada modo
+                    llenarTarjeta('squad', datos.squad);
+                    llenarTarjeta('duo', datos.duo);
+                    llenarTarjeta('solo', datos.solo);
+
+                } else {
+                    errorMsg.innerText = '❌ ' + datos.error;
+                }
+            } catch (error) {
+                errorMsg.innerText = '❌ Error de conexión con el servidor.';
+            }
+        }
+    </script>
+</body>
+</html>
