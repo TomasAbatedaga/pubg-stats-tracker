@@ -9,10 +9,8 @@
         input { padding: 10px; font-size: 16px; width: 200px; }
         button { padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #f2a900; border: none; font-weight: bold; }
         
-        /* Contenedor flexible para mostrar las 3 cajas en fila */
         .contenedor-stats { display: flex; justify-content: center; gap: 20px; margin-top: 30px; flex-wrap: wrap; }
         
-        /* Diseño de cada tarjeta de modo de juego */
         .caja-stats { background-color: #333; padding: 20px; border-radius: 8px; text-align: left; min-width: 220px; display: none; }
         .caja-stats h3 { color: #f2a900; border-bottom: 1px solid #555; padding-bottom: 10px; text-align: center; }
     </style>
@@ -70,7 +68,6 @@
             const nombre = document.getElementById('inputNombre').value;
             const errorMsg = document.getElementById('mensajeError');
             
-            // Mostrar las cajas y poner el estado de "Buscando..."
             document.getElementById('cajaSquad').style.display = 'block';
             document.getElementById('cajaDuo').style.display = 'block';
             document.getElementById('cajaSolo').style.display = 'block';
@@ -78,7 +75,6 @@
             document.getElementById('tituloJugador').innerText = '';
 
             try {
-                // Consultamos a nuestro propio backend de Express
                 const respuesta = await fetch(`/api/stats/${nombre}`);
                 const datos = await respuesta.json();
 
@@ -86,8 +82,6 @@
                     errorMsg.innerText = '';
                     document.getElementById('tituloJugador').innerText = `Estadísticas de ${nombre.toUpperCase()}`;
 
-                    // Creamos una pequeña función interna para no repetir tanto código al llenar los datos
-                    // Esta función hace exactamente la misma validación (roundsPlayed > 0) que hiciste en Node
                     const llenarTarjeta = (modo, stats) => {
                         if (stats && stats.roundsPlayed > 0) {
                             document.getElementById(`${modo}-partidas`).innerText = stats.roundsPlayed;
@@ -109,7 +103,6 @@
                         }
                     };
 
-                    // Llamamos a la función para cada modo
                     llenarTarjeta('squad', datos.squad);
                     llenarTarjeta('duo', datos.duo);
                     llenarTarjeta('solo', datos.solo);
