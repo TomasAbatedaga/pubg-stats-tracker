@@ -185,13 +185,13 @@
 
             const llenarTarjeta = (modo, stats) => {
                 if (stats && stats.roundsPlayed > 0) {
-                    document.getElementById(`${modo}-partidas`).innerText = stats.roundsPlayed;
-                    document.getElementById(`${modo}-victorias`).innerText = stats.wins;
-                    document.getElementById(`${modo}-kills`).innerText = stats.kills;
-                    document.getElementById(`${modo}-dano`).innerText = Math.round(stats.damageDealt);
-                    document.getElementById(`${modo}-top10`).innerText = stats.top10s;
-                    document.getElementById(`${modo}-assist`).innerText = stats.assists;
-                    document.getElementById(`${modo}-distancia`).innerText = Math.round(stats.rideDistance) + " m";
+                    document.getElementById(`${modo}-partidas`).innerText = stats.roundsPlayed || 0;
+                    document.getElementById(`${modo}-victorias`).innerText = stats.wins || 0;
+                    document.getElementById(`${modo}-kills`).innerText = stats.kills || 0;
+                    document.getElementById(`${modo}-dano`).innerText = Math.round(stats.damageDealt || 0);
+                    document.getElementById(`${modo}-top10`).innerText = stats.top10s !== undefined ? stats.top10s : "N/A";
+                    document.getElementById(`${modo}-distancia`).innerText = stats.rideDistance !== undefined ? Math.round(stats.rideDistance) + " m" : "N/A";
+                    document.getElementById(`${modo}-assist`).innerText = stats.assists || 0;
                 } else {
                     document.getElementById(`${modo}-partidas`).innerText = "0";
                     document.getElementById(`${modo}-victorias`).innerText = "0";
