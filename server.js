@@ -32,7 +32,6 @@ app.get('/api/seasons', async (req, res) => {
         res.status(500).json({ error: 'No se pudieron cargar las temporadas' });
     }
 });
-
 app.get('/api/stats/:nombreJugador/:seasonId', async (req, res) => {
   const playerName = req.params.nombreJugador; 
   const seasonId = req.params.seasonId;
@@ -48,29 +47,37 @@ app.get('/api/stats/:nombreJugador/:seasonId', async (req, res) => {
     const respuestaStats = await axios.get(urlStats, config);
     const stats = respuestaStats.data.data.attributes.gameModeStats;
 
-    let statsRankedSquadFpp = null;
-    let statsRankedSquadTpp = null;
+    let rankedFpp = { squad: null, duo: null, solo: null };
+    let rankedTpp = { squad: null, duo: null, solo: null };
     
     if (seasonId !== 'lifetime') {
         try {
             const urlRanked = `https://api.pubg.com/shards/${PLATFORM}/players/${accountId}/seasons/${seasonId}/ranked`;
             const respuestaRanked = await axios.get(urlRanked, config);
             const rankedStats = respuestaRanked.data.data.attributes.rankedGameModeStats;
-            statsRankedSquadFpp = rankedStats['squad-fpp'];
-            statsRankedSquadTpp = rankedStats['squad'];
+            
+            rankedFpp.squad = rankedStats['squad-fpp'];
+            rankedFpp.duo = rankedStats['duo-fpp'];
+            rankedFpp.solo = rankedStats['solo-fpp'];
+
+            rankedTpp.squad = rankedStats['squad'];
+            rankedTpp.duo = rankedStats['duo'];
+            rankedTpp.solo = rankedStats['solo'];
         } catch (e) {
             console.log(`El jugador no tiene stats de Ranked en la temporada ${seasonId}.`);
         }
     }
+
     res.json({
         fpp: { squad: stats['squad-fpp'], duo: stats['duo-fpp'], solo: stats['solo-fpp'] },
         tpp: { squad: stats['squad'], duo: stats['duo'], solo: stats['solo'] },
-        ranked: { squadFpp: statsRankedSquadFpp, squadTpp: statsRankedSquadTpp }
+        rankedFpp: rankedFpp,
+        rankedTpp: rankedTpp
     });
 
   } catch (error) {
     console.error('Error procesando jugador o no tiene datos en esa temporada.');
-    res.status(404).json({ error: 'Jugador no encontrado o sin datos en esta temporada' });
+    res.status(404).json({ error: 'Jugador no encontrado o sin datos' });
   }
 });
 

@@ -33,7 +33,7 @@
         <p style="margin-top: 0;">Selecciona la Temporada y el Jugador:</p>
         <select id="selectTemporada">
             <option value="lifetime">De por vida (Lifetime)</option>
-            </select>
+        </select>
         
         <input type="text" id="inputNombre" placeholder="Nombre en Steam">
         <button class="btn-buscar" onclick="buscarStats()">Buscar Stats</button>
@@ -45,7 +45,8 @@
     <div id="selectorVista" class="contenedor-botones">
         <button id="btnFpp" class="btn-vista activo" onclick="cambiarVista('fpp')">Normal (FPP)</button>
         <button id="btnTpp" class="btn-vista" onclick="cambiarVista('tpp')">Normal (TPP)</button>
-        <button id="btnRanked" class="btn-vista btn-ranked" onclick="cambiarVista('ranked')">Competitivo (Ranked)</button>
+        <button id="btnRankedFpp" class="btn-vista btn-ranked" onclick="cambiarVista('rankedFpp')">Ranked (FPP)</button>
+        <button id="btnRankedTpp" class="btn-vista btn-ranked" onclick="cambiarVista('rankedTpp')">Ranked (TPP)</button>
     </div>
 
     <div class="contenedor-stats">
@@ -134,7 +135,7 @@
                     document.getElementById('selectorVista').style.display = 'block';
                     datosGlobales = datos;
                     
-                    if(seasonId === 'lifetime' && vistaActual === 'ranked') {
+                    if(seasonId === 'lifetime' && (vistaActual === 'rankedFpp' || vistaActual === 'rankedTpp')) {
                         vistaActual = 'fpp';
                     }
                     
@@ -150,7 +151,7 @@
         function cambiarVista(nuevaVista) {
             if (!datosGlobales) return;
             
-            if (document.getElementById('selectTemporada').value === 'lifetime' && nuevaVista === 'ranked') {
+            if (document.getElementById('selectTemporada').value === 'lifetime' && (nuevaVista === 'rankedFpp' || nuevaVista === 'rankedTpp')) {
                 alert("Las estadísticas Ranked no están disponibles en el modo 'De por vida'. Por favor, selecciona una temporada específica.");
                 return;
             }
@@ -159,16 +160,29 @@
             
             document.getElementById('btnFpp').classList.remove('activo');
             document.getElementById('btnTpp').classList.remove('activo');
-            document.getElementById('btnRanked').classList.remove('activo');
+            document.getElementById('btnRankedFpp').classList.remove('activo');
+            document.getElementById('btnRankedTpp').classList.remove('activo');
             
             if (nuevaVista === 'fpp') document.getElementById('btnFpp').classList.add('activo');
             else if (nuevaVista === 'tpp') document.getElementById('btnTpp').classList.add('activo');
-            else document.getElementById('btnRanked').classList.add('activo');
+            else if (nuevaVista === 'rankedFpp') document.getElementById('btnRankedFpp').classList.add('activo');
+            else if (nuevaVista === 'rankedTpp') document.getElementById('btnRankedTpp').classList.add('activo');
 
             mostrarDatosVista(vistaActual);
         }
 
         function mostrarDatosVista(vista) {
+            const datosAUsar = datosGlobales[vista];
+            
+            let prefijo = (vista.includes('ranked')) ? '🏆 RANKED' : 'NORMAL';
+            let sufijo = (vista.includes('Fpp') || vista === 'fpp') ? 'FPP' : 'TPP';
+
+            document.getElementById('cajaSolo').style.display = 'block'; 
+
+            document.getElementById('titulo-squad').innerText = `${prefijo} SQUAD (${sufijo})`;
+            document.getElementById('titulo-duo').innerText = `${prefijo} DUO (${sufijo})`;
+            document.getElementById('titulo-solo').innerText = `${prefijo} SOLO (${sufijo})`;
+
             const llenarTarjeta = (modo, stats) => {
                 if (stats && stats.roundsPlayed > 0) {
                     document.getElementById(`${modo}-partidas`).innerText = stats.roundsPlayed;
@@ -177,7 +191,7 @@
                     document.getElementById(`${modo}-dano`).innerText = Math.round(stats.damageDealt);
                     document.getElementById(`${modo}-top10`).innerText = stats.top10s;
                     document.getElementById(`${modo}-assist`).innerText = stats.assists;
-                    document.getElementById(`${modo}-distancia`).innerText = Math.round(stats.rideDistance);
+                    document.getElementById(`${modo}-distancia`).innerText = Math.round(stats.rideDistance) + " m";
                 } else {
                     document.getElementById(`${modo}-partidas`).innerText = "0";
                     document.getElementById(`${modo}-victorias`).innerText = "0";
@@ -185,35 +199,12 @@
                     document.getElementById(`${modo}-dano`).innerText = "0";
                     document.getElementById(`${modo}-top10`).innerText = "0";
                     document.getElementById(`${modo}-assist`).innerText = "0";
-                    document.getElementById(`${modo}-distancia`).innerText = "0";
+                    document.getElementById(`${modo}-distancia`).innerText = "0 m";
                 }
             };
-
-            if (vista === 'fpp' || vista === 'tpp') {
-                const datosAUsar = datosGlobales[vista];
-                const sufijo = vista === 'fpp' ? 'FPP' : 'TPP';
-
-                document.getElementById('cajaSolo').style.display = 'block'; 
-                
-                document.getElementById('titulo-squad').innerText = `SQUAD ${sufijo}`;
-                document.getElementById('titulo-duo').innerText = `DUO ${sufijo}`;
-                document.getElementById('titulo-solo').innerText = `SOLO ${sufijo}`;
-
-                llenarTarjeta('squad', datosAUsar.squad);
-                llenarTarjeta('duo', datosAUsar.duo);
-                llenarTarjeta('solo', datosAUsar.solo);
-            } 
-            else if (vista === 'ranked') {
-                const datosRanked = datosGlobales.ranked;
-                
-                document.getElementById('cajaSolo').style.display = 'none'; 
-
-                document.getElementById('titulo-squad').innerText = `🏆 SQUAD RANKED (FPP)`;
-                document.getElementById('titulo-duo').innerText = `🏆 SQUAD RANKED (TPP)`;
-
-                llenarTarjeta('squad', datosRanked.squadFpp);
-                llenarTarjeta('duo', datosRanked.squadTpp); 
-            }
+            llenarTarjeta('squad', datosAUsar.squad);
+            llenarTarjeta('duo', datosAUsar.duo);
+            llenarTarjeta('solo', datosAUsar.solo);
         }
     </script>
 </body>
